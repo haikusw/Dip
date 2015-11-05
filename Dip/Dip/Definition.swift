@@ -22,8 +22,6 @@
 // THE SOFTWARE.
 //
 
-import Foundation
-
 ///Internal representation of a key used to associate definitons and factories by tag, type and factory.
 struct DefinitionKey : Hashable, Equatable, CustomDebugStringConvertible {
   var protocolType: Any.Type
@@ -64,7 +62,7 @@ public enum ComponentScope {
  
  For example `DefinitionOf<Service,(String)->Service>` is the type of definition that during resolution will produce instance of type `Service` using closure that accepts `String` argument.
 */
-public struct DefinitionOf<T, F>: Definition {
+public final class DefinitionOf<T, F>: Definition {
   
   /**
    Sets the block that will be used to resolve dependencies of the component. 
@@ -92,10 +90,8 @@ public struct DefinitionOf<T, F>: Definition {
     guard resolveDependenciesBlock == nil else {
       fatalError("You can not change resolveDependencies block after it was set.")
     }
-    var newDefinition = self
-    newDefinition.resolveDependenciesBlock = block
-    container.register(newDefinition)
-    return newDefinition
+    self.resolveDependenciesBlock = block
+    return self
   }
   
   let factory: F
@@ -107,23 +103,46 @@ public struct DefinitionOf<T, F>: Definition {
     self.factory = factory
     self.scope = scope
     self.tag = tag
+    
+    if let factory = factory as? ()->T where tag == nil {
+      injectedDefinition = DefinitionOf<Any, ()->Any>(factory: { factory() }, scope: scope, tag: DependencyContainer.Tag.String(injectedTag(T.self)))
+      
+      injectedWeakDefinition = DefinitionOf<AnyObject, ()->AnyObject>(factory: {
+        guard let result = factory() as? AnyObject else {
+          fatalError("\(T.self) can not be casted to AnyObject. InjectedWeak wrapper should be used to wrap only classes.")
+        }
+        return result
+        }, scope: scope, tag: DependencyContainer.Tag.String(injectedWeakTag(T.self)))
+    }
+
   }
   
   ///Will be stored only if scope is `Singleton`
   var resolvedInstance: T? {
     get {
       guard scope == .Singleton else { return nil }
-      return _resolvedInstance
+      
+      return _resolvedInstance ??
+        injectedDefinition?._resolvedInstance as? T ??
+        injectedWeakDefinition?._resolvedInstance as? T
+    }
+    set {
+      guard scope == .Singleton else { return }
+      
+      _resolvedInstance = newValue
+      injectedDefinition?._resolvedInstance = newValue
+      injectedWeakDefinition?._resolvedInstance = newValue as? AnyObject
     }
   }
   
-  mutating func resolvedInstance(container: DependencyContainer, tag: DependencyContainer.Tag? = nil, instance: T) {
-    guard scope == .Singleton else { return }
-    _resolvedInstance = instance
-    container.register(self)
-  }
-  
   private var _resolvedInstance: T?
+  
+  ///Accessory definition used to auto-inject strong properties
+  var injectedDefinition: DefinitionOf<Any,()->Any>?
+  
+  ///Accessory definition used to auto-inject weak properties
+  var injectedWeakDefinition: DefinitionOf<AnyObject,()->AnyObject>?
+
 }
 
 ///Dummy protocol to store definitions for different types in collection

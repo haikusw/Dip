@@ -45,8 +45,8 @@ class ComponentScopeTests: XCTestCase {
     XCTAssertEqual(def.scope, ComponentScope.Prototype)
   }
   
-  func testThatCallingInScopeChangesScope() {
-    let def = container.register(ComponentScope.Singleton) { ServiceImp1() as Service }
+  func testThatScopeCanBeChanged() {
+    let def = container.register(.Singleton) { ServiceImp1() as Service }
     XCTAssertEqual(def.scope, ComponentScope.Singleton)
   }
   
