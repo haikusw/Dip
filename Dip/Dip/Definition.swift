@@ -105,14 +105,14 @@ public final class DefinitionOf<T, F>: Definition {
     self.tag = tag
     
     if let factory = factory as? ()->T where tag == nil {
-      injectedDefinition = DefinitionOf<Any, ()->Any>(factory: { factory() }, scope: scope, tag: DependencyContainer.Tag.String(injectedTag(T.self)))
+      injectedDefinition = DefinitionOf<Any, ()->Any>(factory: { factory() }, scope: scope, tag: Injected<T>.tag)
       
       injectedWeakDefinition = DefinitionOf<AnyObject, ()->AnyObject>(factory: {
         guard let result = factory() as? AnyObject else {
           fatalError("\(T.self) can not be casted to AnyObject. InjectedWeak wrapper should be used to wrap only classes.")
         }
         return result
-        }, scope: scope, tag: DependencyContainer.Tag.String(injectedWeakTag(T.self)))
+        }, scope: scope, tag: InjectedWeak<T>.tag)
     }
 
   }

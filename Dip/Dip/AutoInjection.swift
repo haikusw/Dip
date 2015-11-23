@@ -46,9 +46,11 @@ class ClientImp: Client {
 */
 public final class Injected<T>: _Injected {
   
+  static var tag: DependencyContainer.Tag {
+    return .String("\(Injected<T>.self)")
+  }
+
   var _value: Any?
-  
-  public init() {}
   
   public var value: T? {
     get {
@@ -58,7 +60,9 @@ public final class Injected<T>: _Injected {
       _value = newValue
     }
   }
-  
+
+  public init() {}
+
 }
 
 /**
@@ -97,9 +101,11 @@ public final class InjectedWeak<T>: _InjectedWeak {
   //so we just rely on user reading documentation and passing AnyObject in runtime
   //also we will throw fatal error if type can not be casted to AnyObject during resolution
 
+  static var tag: DependencyContainer.Tag {
+    return .String("\(InjectedWeak<T>.self)")
+  }
+
   weak var _value: AnyObject?
-  
-  public init() {}
   
   public var value: T? {
     get {
@@ -109,7 +115,9 @@ public final class InjectedWeak<T>: _InjectedWeak {
       _value = newValue as? AnyObject
     }
   }
-  
+
+  public init() {}
+
 }
 
 extension DependencyContainer {
@@ -140,16 +148,8 @@ extension DependencyContainer {
    
    */
   public func resolveDependencies(instance: Any) {
-    for child in Mirror(reflecting: instance).children
-      where child.value is _Injected || child.value is _InjectedWeak  {
-        
-        let tag = Tag.String("\(child.value.dynamicType)")
-        if let value = child.value as? _Injected {
-          value._value = resolve(tag: tag) as Any
-        }
-        else if let weakValue = child.value as? _InjectedWeak {
-          weakValue._value = resolve(tag: tag) as AnyObject
-        }
+    for child in Mirror(reflecting: instance).children {
+      (child.value as? _AutoInjected)?.resolve(self)
     }
   }
 
@@ -162,11 +162,11 @@ extension DependencyContainer {
   typealias InjectedWeakFactory = ()->AnyObject
   
   static func injectedKey<T>(type: T.Type) -> DefinitionKey {
-    return DefinitionKey(protocolType: Any.self, factoryType: InjectedFactory.self, associatedTag: Tag.String(injectedTag(type)))
+    return DefinitionKey(protocolType: Any.self, factoryType: InjectedFactory.self, associatedTag: Injected<T>.tag)
   }
   
   static func injectedWeakKey<T>(type: T.Type) -> DefinitionKey {
-    return DefinitionKey(protocolType: AnyObject.self, factoryType: InjectedWeakFactory.self, associatedTag: Tag.String(injectedWeakTag(type)))
+    return DefinitionKey(protocolType: AnyObject.self, factoryType: InjectedWeakFactory.self, associatedTag: InjectedWeak<T>.tag)
   }
   
   func registerInjected<T, F>(definition: DefinitionOf<T, F>) {
@@ -191,19 +191,29 @@ extension DependencyContainer {
 
 }
 
-func injectedTag<T>(type: T.Type) -> String {
-  return "\(Injected<T>().dynamicType)"
+protocol _AutoInjected {
+  func resolve(container: DependencyContainer)
+  static var tag: DependencyContainer.Tag { get }
 }
 
-func injectedWeakTag<T>(type: T.Type) -> String {
-  return "\(InjectedWeak<T>().dynamicType)"
-}
-
-protocol _Injected: class {
+protocol _Injected: class, _AutoInjected {
   var _value: Any? { get set }
 }
 
-protocol _InjectedWeak: class {
+extension _Injected {
+  func resolve(container: DependencyContainer) {
+    self._value = container.resolve(tag: self.dynamicType.tag) as Any
+  }
+}
+
+protocol _InjectedWeak: class, _AutoInjected {
   weak var _value: AnyObject? { get set }
 }
+
+extension _InjectedWeak {
+  func resolve(container: DependencyContainer) {
+    self._value = container.resolve(tag: self.dynamicType.tag) as AnyObject
+  }
+}
+
 

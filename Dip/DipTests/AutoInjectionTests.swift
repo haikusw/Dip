@@ -68,14 +68,13 @@ class AutoInjectionTests: XCTestCase {
   
   override func setUp() {
     super.setUp()
-    // Put setup code here. This method is called before the invocation of each test method in the class.
+
     container.reset()
     AutoInjectionTests.serverDeallocated = false
     AutoInjectionTests.clientDeallocated = false
     
     container.register(.ObjectGraph) { ServerImp() as Server }
     container.register(.ObjectGraph) { ClientImp() as Client }
-
   }
 
   func testThatItResolvesInjectedDependencies() {
@@ -100,15 +99,18 @@ class AutoInjectionTests: XCTestCase {
   func testThatItResolvesAutoInjectedSingletons() {
     container.reset()
     
+    //given
     container.register(.Singleton) { ServerImp() as Server }
     container.register(.Singleton) { ClientImp() as Client }
     
+    //when
     let sharedClient = container.resolve() as Client
     let sharedServer = container.resolve() as Server
 
     let client = container.resolve() as Client
     let server = client.server
     
+    //then
     XCTAssertTrue(client as! ClientImp === sharedClient as! ClientImp)
     XCTAssertTrue(client as! ClientImp === server?.client as! ClientImp)
     XCTAssertTrue(server as! ServerImp === sharedServer as! ServerImp)
