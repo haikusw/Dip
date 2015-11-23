@@ -48,9 +48,7 @@ public final class Injected<T>: _Injected {
   
   var _value: Any?
   
-  public init(_ value: T? = nil) {
-    self._value = value
-  }
+  public init() {}
   
   public var value: T? {
     get {
@@ -101,9 +99,7 @@ public final class InjectedWeak<T>: _InjectedWeak {
 
   weak var _value: AnyObject?
   
-  public init(_ value: T? = nil) {
-    self._value = value as? AnyObject
-  }
+  public init() {}
   
   public var value: T? {
     get {
