@@ -263,44 +263,16 @@ public class DependencyContainer {
   ///Pool to hold instances, created during call to `resolve()`. 
   ///Before `resolve()` returns pool is drained.
   class ResolvedInstances {
-    var resolvedInstances = [String: Any]()
+    var resolvedInstances = [DefinitionKey: Any]()
 
     func storeResolvedInstance<T>(instance: T, forKey key: DefinitionKey?) {
-      self[key] = instance
+      resolvedInstances[key] = instance
+      resolvedInstances[DependencyContainer.injectedKey(T.self)] = instance
+      resolvedInstances[DependencyContainer.injectedWeakKey(T.self)] = instance
     }
     
     func previouslyResolved<T, F>(key: DefinitionKey?, definition: DefinitionOf<T, F>) -> T? {
-      return (definition.resolvedInstance ?? self[key]) as? T
-    }
-    
-    subscript(key: DefinitionKey?) -> Any? {
-      get {
-        guard let key = resolvedKey(key) else { return nil }
-        return resolvedInstances[key]
-      }
-      set {
-        guard let key = resolvedKey(key) else { return }
-        resolvedInstances[key] = newValue
-      }
-    }
-    
-    func resolvedKey(key: DefinitionKey?) -> String? {
-      guard let key = key else { return nil }
-      
-      let stringKey: String
-      switch key.associatedTag {
-      case .String(let tagValue)? where tagValue.hasPrefix("InjectedWeak<"):
-        var typeString = tagValue.stringByReplacingOccurrencesOfString("InjectedWeak<", withString: "")
-        typeString = typeString.substringToIndex(typeString.endIndex.predecessor())
-        stringKey = "\(typeString)-() -> \(typeString)-nil"
-      case .String(let tagValue)? where tagValue.hasPrefix("Injected<"):
-        var typeString = tagValue.stringByReplacingOccurrencesOfString("Injected<", withString: "")
-        typeString = typeString.substringToIndex(typeString.endIndex.predecessor())
-        stringKey = "\(typeString)-() -> \(typeString)-nil"
-      default:
-        stringKey = "\(key.protocolType)-\(key.factoryType)-\(key.associatedTag)"
-      }
-      return stringKey
+      return (definition.resolvedInstance ?? resolvedInstances[key]) as? T
     }
     
     private var depth: Int = 0

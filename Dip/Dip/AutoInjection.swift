@@ -162,35 +162,35 @@ extension DependencyContainer {
 //MARK: - Private
 
 extension DependencyContainer {
-  private typealias InjectedFactory = ()->Any
-  private typealias InjectedWeakFactory = ()->AnyObject
+  typealias InjectedFactory = ()->Any
+  typealias InjectedWeakFactory = ()->AnyObject
   
-  private func injectedKey(T: Any.Type) -> DefinitionKey {
+  static func injectedKey(T: Any.Type) -> DefinitionKey {
     return DefinitionKey(protocolType: Any.self, factoryType: InjectedFactory.self, associatedTag: Tag.String(injectedTag(T.self)))
   }
   
-  private func injectedWeakKey(T: Any.Type) -> DefinitionKey {
+  static func injectedWeakKey(T: Any.Type) -> DefinitionKey {
     return DefinitionKey(protocolType: AnyObject.self, factoryType: InjectedWeakFactory.self, associatedTag: Tag.String(injectedWeakTag(T.self)))
   }
   
   func registerInjected<T, F>(definition: DefinitionOf<T, F>) {
     guard let definition = definition.injectedDefinition else { return }
-    definitions[injectedKey(T.self)] = definition
+    definitions[DependencyContainer.injectedKey(T.self)] = definition
   }
   
   func registerInjectedWeak<T, F>(definition: DefinitionOf<T, F>) {
     guard let definition = definition.injectedWeakDefinition else { return }
-    definitions[injectedWeakKey(T.self)] = definition
+    definitions[DependencyContainer.injectedWeakKey(T.self)] = definition
   }
   
   func removeInjected<T, F>(definition: DefinitionOf<T, F>) {
     guard definition.injectedDefinition != nil else { return }
-    definitions[injectedKey(T.self)] = nil
+    definitions[DependencyContainer.injectedKey(T.self)] = nil
   }
   
   func removeInjectedWeak<T, F>(definition: DefinitionOf<T, F>) {
     guard definition.injectedWeakDefinition != nil else { return }
-    definitions[injectedWeakKey(T.self)] = nil
+    definitions[DependencyContainer.injectedWeakKey(T.self)] = nil
   }
 
 }
