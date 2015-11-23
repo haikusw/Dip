@@ -165,12 +165,12 @@ extension DependencyContainer {
   typealias InjectedFactory = ()->Any
   typealias InjectedWeakFactory = ()->AnyObject
   
-  static func injectedKey(T: Any.Type) -> DefinitionKey {
-    return DefinitionKey(protocolType: Any.self, factoryType: InjectedFactory.self, associatedTag: Tag.String(injectedTag(T.self)))
+  static func injectedKey<T>(type: T.Type) -> DefinitionKey {
+    return DefinitionKey(protocolType: Any.self, factoryType: InjectedFactory.self, associatedTag: Tag.String(injectedTag(type)))
   }
   
-  static func injectedWeakKey(T: Any.Type) -> DefinitionKey {
-    return DefinitionKey(protocolType: AnyObject.self, factoryType: InjectedWeakFactory.self, associatedTag: Tag.String(injectedWeakTag(T.self)))
+  static func injectedWeakKey<T>(type: T.Type) -> DefinitionKey {
+    return DefinitionKey(protocolType: AnyObject.self, factoryType: InjectedWeakFactory.self, associatedTag: Tag.String(injectedWeakTag(type)))
   }
   
   func registerInjected<T, F>(definition: DefinitionOf<T, F>) {
@@ -195,12 +195,12 @@ extension DependencyContainer {
 
 }
 
-func injectedTag(T: Any.Type) -> String {
-  return "Injected<\(T.self)>"
+func injectedTag<T>(type: T.Type) -> String {
+  return "\(Injected<T>().dynamicType)"
 }
 
-func injectedWeakTag(T: Any.Type) -> String {
-  return "InjectedWeak<\(T.self)>"
+func injectedWeakTag<T>(type: T.Type) -> String {
+  return "\(InjectedWeak<T>().dynamicType)"
 }
 
 protocol _Injected: class {
