@@ -92,11 +92,13 @@ public final class DefinitionOf<T, F>: Definition {
    ```
    
    */
-  public func resolveDependencies(container: DependencyContainer, block: (DependencyContainer, T) -> ()) -> DefinitionOf<T, F> {
+  public func resolveDependencies(block: (DependencyContainer, T) -> ()) -> DefinitionOf<T, F> {
     guard resolveDependenciesBlock == nil else {
       fatalError("You can not change resolveDependencies block after it was set.")
     }
     self.resolveDependenciesBlock = block
+    self.injectedDefinition?.resolveDependenciesBlock = { block($0, $1 as! T) }
+    self.injectedWeakDefinition?.resolveDependenciesBlock = { block($0, $1 as! T) }
     return self
   }
   

@@ -27,10 +27,13 @@ import XCTest
 
 private protocol Server {
   weak var client: Client? {get}
+  
+  var anotherClient: Client? {get set}
 }
 
 private protocol Client: class {
   var server: Server? {get}
+  var anotherServer: Server? {get set}
 }
 
 class AutoInjectionTests: XCTestCase {
@@ -49,6 +52,8 @@ class AutoInjectionTests: XCTestCase {
     weak var client: Client? {
       return _client.value
     }
+    
+    weak var anotherClient: Client?
   }
   
   private class ClientImp: Client {
@@ -58,10 +63,12 @@ class AutoInjectionTests: XCTestCase {
     }
     
     var _server = Injected<Server>()
+    var anotherServer: Server?
     
     var server: Server? {
       return _server.value
     }
+    
   }
 
   let container = DependencyContainer()
@@ -114,6 +121,53 @@ class AutoInjectionTests: XCTestCase {
     XCTAssertTrue(client as! ClientImp === sharedClient as! ClientImp)
     XCTAssertTrue(client as! ClientImp === server?.client as! ClientImp)
     XCTAssertTrue(server as! ServerImp === sharedServer as! ServerImp)
+  }
+  
+  func testThatItCallsResolveDependencyBlockOnOriginalDefiniton() {
+    var serverBlockWasCalled = false
+    container.register(.ObjectGraph) { ServerImp() as Server }
+      .resolveDependencies { (container, server) -> () in
+        serverBlockWasCalled = true
+    }
+
+
+    container.resolve() as Client
+    XCTAssertTrue(serverBlockWasCalled)
+
+    var clientBlockWasCalled = false
+    container.register(.ObjectGraph) { ClientImp() as Client }
+      .resolveDependencies { (container, client) -> () in
+        clientBlockWasCalled = true
+    }
+    container.resolve() as Server
+
+    XCTAssertTrue(clientBlockWasCalled)
+  }
+  
+  func testThatItReuseResolvedAutoInjectedInstences() {
+    
+    container.register(.ObjectGraph) { ServerImp() as Server }
+      .resolveDependencies { (container, var server) -> () in
+        server.anotherClient = container.resolve() as Client
+    }
+
+    container.register(.ObjectGraph) { ClientImp() as Client }
+      .resolveDependencies { (container, client) -> () in
+        client.anotherServer = container.resolve() as Server
+    }
+
+    let client = (container.resolve() as Client) as! ClientImp
+    
+    let server = client.server as! ServerImp
+    let anotherServer = client.anotherServer as! ServerImp
+    
+    XCTAssertTrue(server === anotherServer)
+    
+    let oneClient = server.client as! ClientImp
+    let anotherClient = server.anotherClient as! ClientImp
+    
+    XCTAssertTrue(oneClient === anotherClient)
+    XCTAssertTrue(client === anotherClient)
   }
   
 }

@@ -304,18 +304,16 @@ extension DependencyContainer.Tag: IntegerLiteralConvertible {
 }
 
 extension DependencyContainer.Tag: StringLiteralConvertible {
-  public typealias ExtendedGraphemeClusterLiteralType = StringLiteralType
-  public typealias UnicodeScalarLiteralType = StringLiteralType
-  
+
   public init(stringLiteral value: StringLiteralType) {
     self = .String(value)
   }
   
-  public init(unicodeScalarLiteral value: UnicodeScalarLiteralType) {
+  public init(unicodeScalarLiteral value: StringLiteralType) {
     self.init(stringLiteral: value)
   }
   
-  public init(extendedGraphemeClusterLiteral value: ExtendedGraphemeClusterLiteralType) {
+  public init(extendedGraphemeClusterLiteral value: StringLiteralType) {
     self.init(stringLiteral: value)
   }
 }
