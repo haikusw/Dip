@@ -157,36 +157,31 @@ extension DependencyContainer {
 
 //MARK: - Private
 
+typealias InjectedFactory = ()->Any
+typealias InjectedWeakFactory = ()->AnyObject
+
 extension DependencyContainer {
-  typealias InjectedFactory = ()->Any
-  typealias InjectedWeakFactory = ()->AnyObject
   
-  static func injectedKey<T>(type: T.Type) -> DefinitionKey {
-    return DefinitionKey(protocolType: Any.self, factoryType: InjectedFactory.self, associatedTag: Injected<T>.tag)
+  func registerInjected(definition: Definition) {
+    guard let key = definition.injectedKey,
+      definition = definition.injectedDefinition else { return }
+    definitions[key] = definition
   }
   
-  static func injectedWeakKey<T>(type: T.Type) -> DefinitionKey {
-    return DefinitionKey(protocolType: AnyObject.self, factoryType: InjectedWeakFactory.self, associatedTag: InjectedWeak<T>.tag)
+  func registerInjectedWeak(definition: Definition) {
+    guard let key = definition.injectedWeakKey,
+      definition = definition.injectedWeakDefinition else { return }
+    definitions[key] = definition
   }
   
-  func registerInjected<T, F>(definition: DefinitionOf<T, F>) {
-    guard let definition = definition.injectedDefinition else { return }
-    definitions[DependencyContainer.injectedKey(T.self)] = definition
-  }
-  
-  func registerInjectedWeak<T, F>(definition: DefinitionOf<T, F>) {
-    guard let definition = definition.injectedWeakDefinition else { return }
-    definitions[DependencyContainer.injectedWeakKey(T.self)] = definition
-  }
-  
-  func removeInjected<T, F>(definition: DefinitionOf<T, F>) {
+  func removeInjected(definition: Definition) {
     guard definition.injectedDefinition != nil else { return }
-    definitions[DependencyContainer.injectedKey(T.self)] = nil
+    definitions[definition.injectedKey] = nil
   }
   
-  func removeInjectedWeak<T, F>(definition: DefinitionOf<T, F>) {
+  func removeInjectedWeak(definition: Definition) {
     guard definition.injectedWeakDefinition != nil else { return }
-    definitions[DependencyContainer.injectedWeakKey(T.self)] = nil
+    definitions[definition.injectedWeakKey] = nil
   }
 
 }

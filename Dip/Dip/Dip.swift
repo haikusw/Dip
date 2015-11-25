@@ -65,8 +65,8 @@ public class DependencyContainer {
    - parameter tag: tag used to register definition
    - parameter definition: definition to remove
    */
-  public func remove<T, F>(definition: DefinitionOf<T, F>) {
-    let key = DefinitionKey(protocolType: T.self, factoryType: F.self, associatedTag: definition.tag)
+  public func remove<T, F>(definition: DefinitionOf<T, F>, forTag tag: Tag? = nil) {
+    let key = DefinitionKey(protocolType: T.self, factoryType: F.self, associatedTag: tag)
     definitions[key] = nil
     removeInjected(definition)
     removeInjectedWeak(definition)
@@ -145,13 +145,8 @@ public class DependencyContainer {
    
    */
   public func registerFactory<T, F>(tag tag: Tag? = nil, scope: ComponentScope, factory: F) -> DefinitionOf<T, F> {
-    let key = DefinitionKey(protocolType: T.self, factoryType: F.self, associatedTag: tag)
-    let definition = DefinitionOf<T, F>(factory: factory, scope: scope, tag: tag)
-    definitions[key] = definition
-    
-    registerInjected(definition)
-    registerInjectedWeak(definition)
-
+    let definition = DefinitionOf<T, F>(scope: scope, factory: factory)
+    register(definition, forTag: tag)
     return definition
   }
   
@@ -162,12 +157,14 @@ public class DependencyContainer {
    - parameter tag: The arbitrary tag to associate definition with
    - parameter definition: definition to register in container
    */
-  public func register<T, F>(definition: DefinitionOf<T, F>) {
-    let key = DefinitionKey(protocolType: T.self, factoryType: F.self, associatedTag: definition.tag)
+  public func register<T, F>(definition: DefinitionOf<T, F>, forTag tag: Tag? = nil) {
+    let key = DefinitionKey(protocolType: T.self, factoryType: F.self, associatedTag: tag)
     definitions[key] = definition
     
-    registerInjected(definition)
-    registerInjectedWeak(definition)
+    if tag == nil {
+      registerInjected(definition)
+      registerInjectedWeak(definition)
+    }
   }
 
   // MARK: Resolve dependencies
@@ -231,7 +228,7 @@ public class DependencyContainer {
     return resolvedInstances.resolve {
       
       if let previouslyResolved: T = resolvedInstances.previouslyResolved(key, definition: definition) {
-        resolvedInstances.storeResolvedInstance(previouslyResolved, forKey: key)
+        resolvedInstances.storeResolvedInstance(previouslyResolved, forKey: key, definition: definition)
         return previouslyResolved
       }
       else {
@@ -241,11 +238,11 @@ public class DependencyContainer {
         //when it returns instance that we try to resolve here can be already resolved
         //so we return it, throwing away instance created by previous call to builder
         if let previouslyResolved: T = resolvedInstances.previouslyResolved(key, definition: definition) {
-          resolvedInstances.storeResolvedInstance(previouslyResolved, forKey: key)
+          resolvedInstances.storeResolvedInstance(previouslyResolved, forKey: key, definition: definition)
           return previouslyResolved
         }
         
-        resolvedInstances.storeResolvedInstance(resolvedInstance, forKey: key)
+        resolvedInstances.storeResolvedInstance(resolvedInstance, forKey: key, definition: definition)
         definition.resolvedInstance = resolvedInstance
         definition.resolveDependenciesBlock?(self, resolvedInstance)
         resolveDependencies(resolvedInstance)
@@ -265,10 +262,12 @@ public class DependencyContainer {
   class ResolvedInstances {
     var resolvedInstances = [DefinitionKey: Any]()
 
-    func storeResolvedInstance<T>(instance: T, forKey key: DefinitionKey?) {
+    func storeResolvedInstance<T, F>(instance: T, forKey key: DefinitionKey?, definition: DefinitionOf<T, F>) {
       resolvedInstances[key] = instance
-      resolvedInstances[DependencyContainer.injectedKey(T.self)] = instance
-      resolvedInstances[DependencyContainer.injectedWeakKey(T.self)] = instance
+      if key != nil {
+        resolvedInstances[definition.injectedKey] = instance
+        resolvedInstances[definition.injectedWeakKey] = instance
+      }
     }
     
     func previouslyResolved<T, F>(key: DefinitionKey?, definition: DefinitionOf<T, F>) -> T? {
